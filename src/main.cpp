@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <vivid/vivid.h>
+#include <immer/vector.hpp>
 #include <lager/util.hpp>
 
 using namespace vivid::ansi;
@@ -25,11 +26,10 @@ Model update(Model const &m, Action const &a) {
 
 void display(Model const &m) {
     terminal::clear();
-    std::cout << grey100 << "[" << white << m.c << grey100 << "]" << std::endl;
+    std::cout << grey100 << "[" << green << m.c << grey100 << "]" << std::endl;
 }
 
 int main() {
-    std::cout << "main!" << std::endl;
     Model state;
     while (true) {
         display(state);

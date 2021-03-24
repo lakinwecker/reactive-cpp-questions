@@ -48,6 +48,6 @@ def clean(c):
 @task
 def run(c):
     if platform.system() == 'Linux':
-        invoke_run(c, f"./build/release/bin/viewer")
+        invoke_run(c, f"./build/release/bin/questions")
     else:
         raise NotImplementedError("running in windows is not working")

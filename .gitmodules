@@ -1,0 +1,12 @@
+[submodule "thirdparty/vivid"]
+	path = thirdparty/vivid
+	url = https://github.com/gurki/vivid.git
+[submodule "thirdparty/immer"]
+	path = thirdparty/immer
+	url = https://github.com/arximboldi/immer.git
+[submodule "thirdparty/lager"]
+	path = thirdparty/lager
+	url = https://github.com/arximboldi/lager.git
+[submodule "thirdparty/json"]
+	path = thirdparty/json
+	url = https://github.com/nlohmann/json.git

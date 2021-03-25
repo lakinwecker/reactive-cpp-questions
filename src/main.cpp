@@ -32,7 +32,7 @@ struct Answer {
 };
 using Action = std::variant<Nothing, Next, Prev, Answer>;
 
-using Questionnaire  = ZipperedList<Question>;
+using Questionnaire = ZipperedList<Question>;
 
 struct Model {
     Questionnaire questions;
@@ -67,8 +67,6 @@ void display(Model m) {
     for(auto const &q : m.questions.nextList) {
         std::cout << grey100 << q.question << std::endl;
     }
-
-    //std::cout << grey100 << "[" << white << m.c << grey100 << "]" << std::endl;
 }
 
 Action fromChar(char c) {

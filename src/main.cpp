@@ -1,4 +1,5 @@
 #include "terminal.h"
+#include "zippered.h"
 
 #include <cstddef>
 #include <iostream>
@@ -31,30 +32,11 @@ struct Answer {
 };
 using Action = std::variant<Nothing, Next, Prev, Answer>;
 
-struct Questionnaire {
-    Question curQuestion;
-    immer::flex_vector<Question> prevQuestions;
-    immer::flex_vector<Question> nextQuestions;
-};
+using Questionnaire  = ZipperedList<Question>;
 
 struct Model {
     Questionnaire questions;
 };
-
-Questionnaire next(Questionnaire q) {
-    return Questionnaire{
-        q.nextQuestions.front(),
-        q.prevQuestions.push_back(q.curQuestion),
-        q.nextQuestions.drop(1)
-    };
-}
-Questionnaire prev(Questionnaire q) {
-    return Questionnaire{
-        q.prevQuestions.back(),
-        q.prevQuestions.take(q.prevQuestions.size()-1),
-        q.nextQuestions.push_front(q.curQuestion)
-    };
-}
 
 Model init() {
     return {
@@ -78,11 +60,11 @@ Model update(Model m, Action a) {
 
 void display(Model m) {
     terminal::clear();
-    for(auto const &q : m.questions.prevQuestions) {
+    for(auto const &q : m.questions.previousList) {
         std::cout << green << q.question << std::endl;
     }
-    std::cout << white << m.questions.curQuestion.question << std::endl;
-    for(auto const &q : m.questions.nextQuestions) {
+    std::cout << white << m.questions.current.question << std::endl;
+    for(auto const &q : m.questions.nextList) {
         std::cout << grey100 << q.question << std::endl;
     }
 

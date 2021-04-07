@@ -1,5 +1,8 @@
 #include "terminal.h"
-#include "zippered.h"
+#include "utils.h"
+#include "questionnav.h"
+#include "questionedit.h"
+#include "questions.h"
 
 #include <cstddef>
 #include <iostream>
@@ -12,108 +15,95 @@
 
 using namespace vivid::ansi;
 
-template <typename ContainedT, typename ReturnT>
-std::optional<ReturnT> map(std::optional<ContainedT> const &opt, std::function<ReturnT(ContainedT)> const &mapper) {
-    if (!opt.has_value()) return std::nullopt;
-    return mapper(opt.value());
-}
 
-struct YesNoQuestion {
-    std::string question;
-    std::optional<bool> answer;
+struct NavAction {
+    nav::Action action;
 };
-std::ostream &operator<<(std::ostream &out, YesNoQuestion q) {
-    out << q.question
-        << " ["
-        << map<bool, std::string>(
-                q.answer,
-                [](bool answer) { return answer ? "Y" : "N"; }
-            ).value_or(" ")
-        << "]";
-
-    return out;
-}
-
-struct ShortAnswerQuestion {
-    std::string question;
-    std::optional<std::string> answer;
+struct EditAction {
+    edit::Action action;
 };
-std::ostream &operator<<(std::ostream &out, ShortAnswerQuestion q) {
-    out << q.question
-        << " ["
-        << q.answer.value_or(" ")
-        << "]";
-    return out;
-}
+using Action = std::variant<NavAction, EditAction>;
 
-using Question = std::variant<YesNoQuestion, ShortAnswerQuestion>;
-std::ostream &operator<<(std::ostream &out, Question q) {
-    std::visit(lager::visitor{
-        [&](auto q) { out << q; },
-    }, q);
-    return out;
-}
-
-struct Nothing {};
-struct Next {};
-struct Prev {};
-struct Answer {
-    std::string answer;
-};
-using Action = std::variant<Nothing, Next, Prev, Answer>;
-
-using Questionnaire = ZipperedList<Question>;
-
-struct Model {
+struct Navigation {
     Questionnaire questions;
 };
+struct EditQuestion {
+    Questionnaire questions;
+};
+using Model = std::variant<Navigation, EditQuestion>;
 
 Model init() {
     return {
-        Questionnaire{
-            YesNoQuestion{"Are you old enough to drink?", true},
-            {},
-            {
-                YesNoQuestion{"Do you live in Canada?"},
-                ShortAnswerQuestion{"Where do you live?", "Calgary"},
-                ShortAnswerQuestion{"What is your name?"}
+        Navigation{
+            Questionnaire{
+                YesNoQuestion{"Are you old enough to drink?", true},
+                {},
+                {
+                    YesNoQuestion{"Do you live in Canada?"},
+                    ShortAnswerQuestion{"Where do you live?", "Calgary"},
+                    ShortAnswerQuestion{"What is your name?"}
+                }
             }
         }
     };
 }
 
 Model update(Model m, Action a) {
-    std::visit(lager::visitor{
-        [&](Nothing) { },
-        [&](Answer) { },
-        [&](Next) { m.questions = next(m.questions); },
-        [&](Prev) { m.questions = prev(m.questions); },
-    }, a);
-    return m;
+    return std::visit(lager::visitor{
+        [&](Navigation nav, NavAction a) {
+            return std::visit(lager::visitor{
+                [&](nav::EnterQuestion a) {
+                    return Model{EditQuestion{nav.questions}};
+                },
+                [&](auto a) {
+                    nav.questions = nav::update(nav.questions, a);
+                    return Model{nav};
+                }
+            }, a.action);
+        },
+        [&](EditQuestion edit, EditAction a) {
+            return std::visit(lager::visitor{
+                [&](edit::Done) {
+                    return Model{Navigation{edit.questions}};
+                },
+                [&](auto a) {
+                    edit.questions = edit::update(edit.questions, a);
+                    return Model{edit};
+                }
+            }, a.action);
+        },
+        [&](auto m, auto a) { return Model{m}; }
+    }, m, a);
 }
 
 void display(Model m) {
-    //terminal::clear();
-    for(auto const &q : m.questions.previousList) {
-        std::cout << green << q << std::endl;
-    }
-    std::cout << white << m.questions.current << std::endl;
-    for(auto const &q : m.questions.nextList) {
-        std::cout << grey100 << q << std::endl;
-    }
+    terminal::clear();
+    std::visit(lager::visitor{
+        [&](Navigation nav) {
+            nav::display(nav.questions);
+        },
+        [&](EditQuestion edit) {
+            edit::display(edit.questions);
+        },
+    }, m);
 }
 
-Action fromChar(char c) {
-    if (c == 'j') return Next{};
-    if (c == 'k') return Prev{};
-    return Nothing{};
+Action fromChar(Model m, char c) {
+    return std::visit(lager::visitor{
+        [&](Navigation nav) {
+            return Action{NavAction{nav::fromChar(nav.questions, c)}};
+        },
+        [&](EditQuestion edit) {
+            return Action{EditAction{edit::fromChar(edit.questions, c)}};
+        }
+    }, m);
 }
 
 int main() {
     Model state = init();
     while (true) {
         display(state);
-        Action a = fromChar(terminal::nextCharacter());
+        Action a = fromChar(state, terminal::nextCharacter());
         state = update(state, a);
     }
     return EXIT_SUCCESS;

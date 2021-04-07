@@ -16,13 +16,7 @@
 using namespace vivid::ansi;
 
 
-struct NavAction {
-    nav::Action action;
-};
-struct EditAction {
-    edit::Action action;
-};
-using Action = std::variant<NavAction, EditAction>;
+using Action = std::variant<nav::Action, edit::Action>;
 
 struct Navigation {
     Questionnaire questions;
@@ -50,7 +44,7 @@ Model init() {
 
 Model update(Model m, Action a) {
     return std::visit(lager::visitor{
-        [&](Navigation nav, NavAction a) {
+        [&](Navigation nav, nav::Action a) {
             return std::visit(lager::visitor{
                 [&](nav::EnterQuestion a) {
                     return Model{EditQuestion{nav.questions}};
@@ -59,9 +53,9 @@ Model update(Model m, Action a) {
                     nav.questions = nav::update(nav.questions, a);
                     return Model{nav};
                 }
-            }, a.action);
+            }, a);
         },
-        [&](EditQuestion edit, EditAction a) {
+        [&](EditQuestion edit, edit::Action a) {
             return std::visit(lager::visitor{
                 [&](edit::Done) {
                     return Model{Navigation{edit.questions}};
@@ -70,7 +64,7 @@ Model update(Model m, Action a) {
                     edit.questions = edit::update(edit.questions, a);
                     return Model{edit};
                 }
-            }, a.action);
+            }, a);
         },
         [&](auto m, auto a) { return Model{m}; }
     }, m, a);
@@ -91,10 +85,10 @@ void display(Model m) {
 Action fromChar(Model m, char c) {
     return std::visit(lager::visitor{
         [&](Navigation nav) {
-            return Action{NavAction{nav::fromChar(nav.questions, c)}};
+            return Action{nav::fromChar(nav.questions, c)};
         },
         [&](EditQuestion edit) {
-            return Action{EditAction{edit::fromChar(edit.questions, c)}};
+            return Action{edit::fromChar(edit.questions, c)};
         }
     }, m);
 }

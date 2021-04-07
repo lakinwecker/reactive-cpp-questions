@@ -93,7 +93,7 @@ Model update(Model m, Action a) {
 }
 
 void display(Model m) {
-    //terminal::clear();
+    terminal::clear();
     for(auto const &q : m.questions.previousList) {
         std::cout << green << q << std::endl;
     }

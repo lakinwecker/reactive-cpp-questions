@@ -15,7 +15,6 @@
 
 using namespace vivid::ansi;
 
-
 using Action = std::variant<nav::Action, edit::Action>;
 
 struct Navigation {
